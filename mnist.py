@@ -57,3 +57,25 @@ net = MNIST_net()
 
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
+
+#############################################################################
+# 3. Learn the model with training data
+#############################################################################
+for epoch in range(15):
+    running_loss = 0.0
+    for i, data in enumerate(trainloader, 0):
+        images, labels = data
+        outputs = net(images)
+        optimizer.zero_grad()
+        loss = criterion(outputs, labels)
+        loss.backward()
+        optimizer.step()
+        running_loss += loss.item()
+        if i % 2000 == 0:
+            print('[%d, %5d] loss: %.3f' %
+                  (epoch + 1, i + 1, running_loss / 2000))
+            running_loss = 0.0
+print('Finished Training')
+PATH = './cifar_net.pth'
+torch.save(net.state_dict(), PATH)
+
