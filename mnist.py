@@ -31,10 +31,10 @@ def imshow(img):
     npimg = img.numpy()
     plt.imshow(np.transpose(npimg, (1, 2, 0)))
     plt.show()
-dataiter = iter(trainloader)
-images, labels = dataiter.next()
-print(' '.join('%s' % classes[labels[j]] for j in range(batch_size)))
-imshow(torchvision.utils.make_grid(images))
+# dataiter = iter(trainloader)
+# images, labels = dataiter.next()
+# print(' '.join('%s' % classes[labels[j]] for j in range(batch_size)))
+# imshow(torchvision.utils.make_grid(images))
 
 #############################################################################
 # 2. Define CNN, loss, and optimizer
@@ -42,27 +42,24 @@ imshow(torchvision.utils.make_grid(images))
 class MNIST_net(nn.Module):
     def __init__(self):
         super(MNIST_net, self).__init__()
-        self.conv1 = nn.Conv2d(1, 6, 5, padding=2)
-        self.conv2 = nn.Conv2d(6, 32, 5, padding=2)
-        self.fc1 = nn.Linear(32 * 7 * 7, 1024)
-        self.fc2 = nn.Linear(1024, 10)
+        self.conv1 = nn.Conv2d(1, 6, 5)
+        self.conv2 = nn.Conv2d(6, 32, 5)
+        self.fc1 = nn.Linear(32 * 4 * 4, 10)
     def forward(self, x):
         x = F.max_pool2d(F.relu(self.conv1(x)), 2)
         x = F.max_pool2d(F.relu(self.conv2(x)), 2)
-        x = x.view(-1, 32 * 7 * 7)
-        x = F.relu(self.fc1(x))
-        x = self.fc2(x)
+        x = x.view(-1, 32 * 4 * 4)
+        x = self.fc1(x)
+        x = F.log_softmax(x, dim=1)
         return x
 net = MNIST_net()
 
 criterion = nn.CrossEntropyLoss()
-optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
+optimizer = optim.SGD(net.parameters(), lr=0.01, momentum=0.9)
 
 #############################################################################
 # 3. Learn the model with training data
 #############################################################################
-train_loss = []
-train_accu = []
 for epoch in range(10):
     running_loss = 0.0
     for i, data in enumerate(trainloader, 0):
@@ -71,21 +68,15 @@ for epoch in range(10):
         outputs = net(images)
         loss = criterion(outputs, labels)
         loss.backward()
-        train_loss.append(loss.data)
         optimizer.step()
-        prediction = outputs.data.max(1)[1]
-        accuracy = prediction.eq(labels.data).sum() / batch_size * 100
-        train_accu.append(accuracy)
         running_loss += loss.item()
-        if i % 1000 == 999:
+        if i % 100 == 0:
             print('[%d, %5d] loss: %.3f' %
-                  (epoch + 1, i + 1, running_loss / 1000))
+                  (epoch + 1, i, running_loss / 1000))
             running_loss = 0.0
 print('Finished Training')
-PATH = './cifar_net.pth'
+PATH = './MNIST_net.pth'
 torch.save(net.state_dict(), PATH)
-# plt.plot(np.arange(len(train_loss)), train_loss)
-# plt.plot(np.arange(len(train_accu)), train_accu)
 
 #############################################################################
 # 4. Testing with the test data
