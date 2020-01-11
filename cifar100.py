@@ -11,7 +11,10 @@ import torch.optim as optim
 # 1. Get training and test data sets
 #############################################################################
 transform = transforms.Compose(
-    [transforms.ToTensor()])
+    [transforms.RandomCrop(32),
+     transforms.RandomHorizontalFlip(),
+     transforms.ToTensor(),
+     transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))])
 batch_size = 50
 trainset = torchvision.datasets.CIFAR100(
     './data', train=True, download=True, transform=transform)
@@ -191,18 +194,21 @@ def imshow(img):
 class CIFAR100_net(nn.Module):
     def __init__(self):
         super(CIFAR100_net, self).__init__()
-        self.conv1 = nn.Conv2d(3, 6, 5)
-        self.conv2 = nn.Conv2d(6, 32, 5)
-        self.fc1 = nn.Linear(32 * 5 * 5, 100)
+        self.conv1 = nn.Conv2d(3, 16, 5, padding=2)
+        self.conv2 = nn.Conv2d(16, 128, 5, padding=2)
+        self.conv3 = nn.Conv2d(128, 1024, 5, padding=2)
+        self.fc1 = nn.Linear(1024 * 4 * 4, 1024)
+        self.fc2 = nn.Linear(1024, 100)
 
     def forward(self, x):
         x = F.max_pool2d(F.relu(self.conv1(x)), 2)
         x = F.max_pool2d(F.relu(self.conv2(x)), 2)
-        x = x.view(-1, 32 * 5 * 5)
-        x = self.fc1(x)
+        x = F.max_pool2d(F.relu(self.conv3(x)), 2)
+        x = x.view(-1, 1024 * 4 * 4)
+        x = F.relu(self.fc1(x))
+        x = self.fc2(x)
         x = F.log_softmax(x, dim=1)
         return x
-
 
 net = CIFAR100_net()
 
@@ -251,9 +257,12 @@ with torch.no_grad():
             label = labels[i]
             class_correct[label] += c[i].item()
             class_total[label] += 1
-print('Accuracy of the network on the test images: %d %%'
+
+f = open("cifar_results/trial 6.csv", 'w')
+f.write('Accuracy of the network on the test images: %d %%\n'
       % (100 * correct / total))
 for i in range(100):
-    print('Accuracy of %s-\t%s:\t%2d %%'
+    f.write('%s,%s,%2d %%\n'
           % (mapping_keys[int(combined_mapping.index(classes[i])/5)],
              classes[i], 100 * class_correct[i] / class_total[i]))
+f.close()
