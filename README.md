@@ -46,9 +46,11 @@ Uses Fast Gradient Sign Method Attack (FGSM) to add adversarial noise to MNIST d
 To create adversarial images, I applied the formula - perturbed_image = original_image + epsilon * sign_of_gradient - to all 
 test images and compared the changed label output with original label output.
 
-Results show that FGSM does indeed lower accuracy of labeling of test images. As epsilon value increases, the accuracy decreases, as shown below:
-![image](./Accuracy%20vs%20Epsilon%20Epsilons%200-0.06.png)
-![image](./Accuracy%20vs%20Epsilon%20Epsilons%200-0.30.png)
+Results show that FGSM does indeed lower accuracy of labeling of test images. 
+
+As epsilon value increases, the accuracy decreases, as shown below:
+![Accuracy_vs_Epsilons_0.06](./Accuracy%20vs%20Epsilon%20Epsilons%200-0.06.png)
+![Accuracy_vs_Epsilons_0.30](./Accuracy%20vs%20Epsilon%20Epsilons%200-0.30.png)
 
 However, the change (addition of noise) becomes more apparent to human eyes as epsilon increases, as shown below:
 ![image](./Classification%20Results%20Epsilons%200-0.06.png)
