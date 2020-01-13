@@ -81,7 +81,8 @@ PATH = './MNIST_net.pth'
 #############################################################################
 # 4. Fast Gradient Sign Attack
 #############################################################################
-epsilons = [0, 0.01, 0.02, 0.03, 0.04, 0.05, 0.06]
+# epsilons = [0, 0.01, 0.02, 0.03, 0.04, 0.05, 0.06]
+epsilons = [0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3]
 
 # image = original clean image x
 # epsilon = pixel-wise perturbation amount
@@ -98,10 +99,13 @@ def fgsm_attack(image, epsilon, data_grad):
 test_net = MNIST_net()
 test_net.load_state_dict(torch.load(PATH))
 accuracies = []
+error_rate = []
 adversarial_images = []
 for eps in epsilons:
     correct = 0
+    error = 0
     total = 0
+    error_total = 0
     adv_examples = []
     for data in testloader:
         total += 1
@@ -117,19 +121,31 @@ for eps in epsilons:
         perturbed_data = fgsm_attack(original_image, eps, data_grad)
         perturbed_outputs = test_net(perturbed_data)
         _, final_pred = torch.max(perturbed_outputs, 1)
+        if init_pred == labels:
+            error_total += 1
         if init_pred == labels and final_pred == init_pred:
             correct += 1
+        if init_pred == labels and final_pred != init_pred:
+            error += 1
         adversarial_image = perturbed_data.squeeze().detach().numpy()
         if total == 1:
             adversarial_images.append(adversarial_image)
     eps_accuracy = correct / float(total)
-    print("Eps:{}\tAccuracy:{}".format(eps, eps_accuracy))
+    eps_error_rate = error / float(error_total)
+    print("Eps:{}\tAccuracy:{}\tError rate:{}".format(eps, eps_accuracy, eps_error_rate))
     accuracies.append(eps_accuracy)
+    error_rate.append(eps_error_rate)
 
 plt.title("Epsilon vs Accuracy")
 plt.plot(epsilons, accuracies, "rs-")
 plt.xlabel('Epsilon')
 plt.ylabel('Accuracy')
+plt.show()
+
+plt.title("Epsilon vs Error rate")
+plt.plot(epsilons, error_rate, "rs-")
+plt.xlabel('Epsilon')
+plt.ylabel('Error rate')
 plt.show()
 
 fig = plt.figure()
