@@ -14,7 +14,7 @@ import torch.optim as optim
 # epsilons = [0, 0.01, 0.02, 0.03, 0.04, 0.05, 0.06]
 # epsilons = [0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3]
 # epsilons = [100, 150, 200, 250, 300, 350, 400]
-epsilons = [0, 0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.1, 0.15, 0.2, 0.25, 0.3]
+epsilons = [0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3]
 
 # image = original clean image x
 # epsilon = pixel-wise perturbation amount
@@ -124,80 +124,81 @@ optimizer = optim.SGD(net.parameters(), lr=0.01, momentum=0.9)
 #############################################################################
 # 3. Learn the model with training data
 #############################################################################
-# for epoch in range(10):
-#     running_loss = 0.0
-#     for i, data in enumerate(trainloader, 0):
-#         images, labels = data
-#         images.requires_grad = True
-#         images = fgsm_attack(images, labels, epsilons[0], net)
-#         optimizer.zero_grad()
-#         outputs = net(images)
-#         loss = criterion(outputs, labels)
-#         loss.backward()
-#         optimizer.step()
-#         running_loss += loss.item()
-#         if i % 100 == 0:
-#             print('[%d, %5d] loss: %.3f' %
-#                   (epoch + 1, i, running_loss / 1000))
-#             running_loss = 0.0
-# print('Finished Training')
-PATH = './MNIST_net.pth'
-# PATH = './MNIST_net_rbf.pth'
-# torch.save(net.state_dict(), PATH)
-
-#############################################################################
-# 5. Testing with the test data
-#############################################################################
-test_net = MNIST_net()
-
-# batch_images, batch_labels = next(iter(testloader))
-# centers = batch_images
-# test_net = RbfNet(centers, num_class=10)
-
-test_net.load_state_dict(torch.load(PATH))
-accuracies = []
-error_rate = []
-adversarial_images = []
 for eps in epsilons:
-    correct = 0
-    error = 0
-    total = 0
-    error_total = 0
-    adv_examples = []
-    for data in testloader:
-        total += test_batch_size
-        original_image, labels = data
-        original_image.requires_grad = True
-        original_outputs = test_net(original_image)
-        _, init_pred = torch.max(original_outputs, 1)
+    for epoch in range(10):
+        running_loss = 0.0
+        for i, data in enumerate(trainloader, 0):
+            images, labels = data
+            images.requires_grad = True
+            images = fgsm_attack(images, labels, eps, net)
+            optimizer.zero_grad()
+            outputs = net(images)
+            loss = criterion(outputs, labels)
+            loss.backward()
+            optimizer.step()
+            running_loss += loss.item()
+    #         if i % 100 == 0:
+    #             print('[%d, %5d] loss: %.3f' %
+    #                   (epoch + 1, i, running_loss / 1000))
+    #             running_loss = 0.0
+    # print('Finished Training')
+    PATH = './MNIST_net.pth'
+    # PATH = './MNIST_net_rbf.pth'
+    torch.save(net.state_dict(), PATH)
 
-        # For iter_fgsm
-        perturbed_image, labels = data
-        perturbed_image.requires_grad = True
-        perturbed_outputs = test_net(perturbed_image)
+    #############################################################################
+    # 5. Testing with the test data
+    #############################################################################
+    test_net = MNIST_net()
 
-        # perturbed image
-        perturbed_data = fgsm_attack(original_image, labels, eps, test_net)
-        n_iter = 100
-        # perturbed_data = iter_fgsm_attack(perturbed_image, labels, eps, n_iter, test_net)
-        perturbed_outputs = test_net(perturbed_data)
-        _, final_pred = torch.max(perturbed_outputs, 1)
+    # batch_images, batch_labels = next(iter(testloader))
+    # centers = batch_images
+    # test_net = RbfNet(centers, num_class=10)
 
-        init_correct = (init_pred == labels)
-        adv_success = (final_pred != init_pred)
-        adv_failure = (final_pred == init_pred)
-        error_total += init_correct.sum()
-        correct += (init_correct * adv_failure).sum()
-        error += (init_correct * adv_success).sum()
-        adversarial_image = perturbed_data.squeeze().detach().numpy()
-        if total == 1:
-            adversarial_images.append(adversarial_image)
+    test_net.load_state_dict(torch.load(PATH))
+    accuracies = []
+    error_rate = []
+    adversarial_images = []
+    for test_eps in epsilons:
+        correct = 0
+        error = 0
+        total = 0
+        error_total = 0
+        adv_examples = []
+        for data in testloader:
+            total += test_batch_size
+            original_image, labels = data
+            original_image.requires_grad = True
+            original_outputs = test_net(original_image)
+            _, init_pred = torch.max(original_outputs, 1)
 
-    eps_accuracy = correct.numpy() / float(total)
-    eps_error_rate = error.numpy() / float(error_total.numpy())
-    print("Eps:{}\tAccuracy:{}\tError rate:{}".format(eps, eps_accuracy, eps_error_rate))
-    accuracies.append(eps_accuracy)
-    error_rate.append(eps_error_rate)
+            # For iter_fgsm
+            perturbed_image, labels = data
+            perturbed_image.requires_grad = True
+            perturbed_outputs = test_net(perturbed_image)
+
+            # perturbed image
+            perturbed_data = fgsm_attack(original_image, labels, test_eps, test_net)
+            n_iter = 100
+            # perturbed_data = iter_fgsm_attack(perturbed_image, labels, eps, n_iter, test_net)
+            perturbed_outputs = test_net(perturbed_data)
+            _, final_pred = torch.max(perturbed_outputs, 1)
+
+            init_correct = (init_pred == labels)
+            adv_success = (final_pred != init_pred)
+            adv_failure = (final_pred == init_pred)
+            error_total += init_correct.sum()
+            correct += (init_correct * adv_failure).sum()
+            error += (init_correct * adv_success).sum()
+            adversarial_image = perturbed_data.squeeze().detach().numpy()
+            if total == 1:
+                adversarial_images.append(adversarial_image)
+
+        eps_accuracy = correct.numpy() / float(total)
+        eps_error_rate = error.numpy() / float(error_total.numpy())
+        print("Trained with eps:{}\tTested with eps:{}\tAccuracy:{}\tError rate:{}".format(eps, test_eps, eps_accuracy, eps_error_rate))
+        accuracies.append(eps_accuracy)
+        error_rate.append(eps_error_rate)
 
 plt.title("Epsilon vs Accuracy")
 plt.plot(epsilons, accuracies, "rs-")
